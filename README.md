@@ -146,75 +146,147 @@ React updates the displayed price without reloading the entire web page.
 
 ## Local Development
 
-The dashboard and Rust backend are maintained in separate repositories.
+The project consists of two separate repositories:
+
+- **Backend:** `real-time-market-pipeline` — Rust, Kafka, PostgreSQL, Redis, and Axum.
+- **Frontend:** `market-pipeline-dashboard` — React, TypeScript, and Vite.
 
 ### Prerequisites
 
+- Rust and Cargo
+- Docker Desktop with Docker Compose
 - Node.js and npm
-- Rust backend running locally
-- PostgreSQL, Redis, and Kafka running through Docker Compose
+- Alpaca API credentials
 
-### Start the Backend
+### 1. Start Infrastructure
 
-From `~/real-time-market-pipeline`:
+From the Rust backend directory:
 
 ```bash
+cd ~/real-time-market-pipeline
 docker compose up -d
-cargo run -p query-api
 ```
 
-To ingest live market data, also start the consumer and producer in separate terminals:
+This starts Kafka, PostgreSQL, and Redis.
+
+The PostgreSQL database must have the required migrations applied before starting the consumer.
+
+### 2. Configure Alpaca Credentials
+
+Create a `.env` file in the **Rust backend directory**:
+
+`~/real-time-market-pipeline/.env`
+
+Add the following variables:
+
+```dotenv
+APCA_API_KEY_ID=your_alpaca_api_key
+APCA_API_SECRET_KEY=your_alpaca_api_secret
+ALPACA_SYMBOLS=AAPL,MSFT,NVDA
+```
+
+| Variable | Purpose |
+|---|---|
+| `APCA_API_KEY_ID` | Alpaca API authentication key |
+| `APCA_API_SECRET_KEY` | Alpaca API authentication secret |
+| `ALPACA_SYMBOLS` | Comma-separated list of symbols to subscribe to |
+
+`ALPACA_SYMBOLS` is optional. The producer defaults to `AAPL` when it is not set.
+
+**Security:** Never commit the `.env` file or actual credentials to GitHub. Ensure `.env` is listed in the backend repository's `.gitignore`.
+
+### 3. Start the Market Producer
+
+Open a terminal:
 
 ```bash
+cd ~/real-time-market-pipeline
+
+# Load credentials into the current shell
+set -a
+source .env
+set +a
+
+# Start the producer
+cargo run -p market-producer
+```
+
+The producer connects to Alpaca's WebSocket and publishes market trades to Kafka.
+
+The environment variables must be loaded in the same terminal session used to start the producer.
+
+### 4. Start the Market Consumer
+
+Open a second terminal:
+
+```bash
+cd ~/real-time-market-pipeline
 cargo run -p market-consumer
 ```
 
+The consumer reads trades from Kafka in batches, writes historical trades to PostgreSQL, and updates the latest trade in Redis.
+
+### 5. Start the Query API
+
+Open a third terminal:
+
 ```bash
-ALPACA_SYMBOLS=AAPL cargo run -p market-producer
+cd ~/real-time-market-pipeline
+cargo run -p query-api
 ```
 
-The producer requires valid Alpaca API credentials.
+The Axum HTTP API listens locally on port `3000`.
 
-### Start the Dashboard
+### 6. Start the React Dashboard
 
-From `~/market-pipeline-dashboard`:
+Open a fourth terminal:
 
 ```bash
+cd ~/market-pipeline-dashboard
 npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/`.
+Open `http://localhost:5173/` in your browser.
+
+The dashboard displays latest stock prices and recent trades, refreshing automatically.
 
 ### API Endpoints
 
 | Endpoint | Purpose | Data Source |
 |---|---|---|
 | `GET /health` | Backend health check | Axum |
-| `GET /prices/AAPL` | Latest trade for AAPL | Redis, with PostgreSQL fallback |
+| `GET /prices/AAPL` | Latest AAPL trade | Redis, with PostgreSQL fallback |
 | `GET /trades/AAPL?limit=10` | Ten most recent AAPL trades | PostgreSQL |
 
 ### Development Proxy
 
-During local development, Vite forwards requests beginning with `/api` to the Rust backend at `http://localhost:3000`.
+During local development, Vite forwards requests beginning with `/api` to the Rust API at `http://localhost:3000`.
 
 For example:
 
 ```text
-Browser: GET http://localhost:5173/api/prices/AAPL
-                    |
-                    v
-Vite proxy: GET http://localhost:3000/prices/AAPL
-                    |
-                    v
+Browser
+  GET http://localhost:5173/api/prices/AAPL
+                  |
+                  v
+Vite Development Server
+                  |
+                  v
 Rust Axum API
+  GET http://localhost:3000/prices/AAPL
+                  |
+                  v
+Redis / PostgreSQL
 ```
 
-This allows the frontend to call the backend without hardcoding a separate local API address in every component.
+The frontend uses `VITE_API_BASE_URL` when explicitly configured; otherwise it defaults to `/api`.
 
-For deployment, the frontend can use `VITE_API_BASE_URL` to specify the publicly reachable API address.
+The React dashboard does not need Alpaca credentials. All market-data access goes through the Rust backend.
 
-## Git Workflow
+### Git Workflow
+
+The frontend and backend are maintained in separate Git repositories.
 
 After making changes:
 
@@ -225,4 +297,4 @@ git commit -m "Describe the changes"
 git push
 ```
 
-The frontend and backend have separate Git repositories and are committed independently.
+Commit changes independently in the repository where they were made.
