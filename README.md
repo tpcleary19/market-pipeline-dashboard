@@ -54,7 +54,7 @@ The dashboard uses HTTP polling rather than a persistent WebSocket connection.
 
 ### How the React Files Work Together
 
-```mermaid id="gk51yf"
+```mermaid
 flowchart TD
     A["main.tsx"] --> B["App.tsx"]
     B --> C["StockCard.tsx"]
