@@ -171,29 +171,40 @@ This starts Kafka, PostgreSQL, and Redis.
 
 The PostgreSQL database must have the required migrations applied before starting the consumer.
 
-### 2. Configure Alpaca Credentials
+### 2. Configure Environment Variables
 
-Create a `.env` file in the **Rust backend directory**:
+The Rust backend uses a `.env` file for local configuration.
 
-`~/real-time-market-pipeline/.env`
+From the backend directory:
 
-Add the following variables:
-
-```dotenv
-APCA_API_KEY_ID=your_alpaca_api_key
-APCA_API_SECRET_KEY=your_alpaca_api_secret
-ALPACA_SYMBOLS=AAPL,MSFT,NVDA
+```bash
+cd ~/real-time-market-pipeline
+cp .env.example .env
 ```
+
+Edit `.env` and enter your Alpaca API credentials.
+
+The configuration includes:
 
 | Variable | Purpose |
 |---|---|
-| `APCA_API_KEY_ID` | Alpaca API authentication key |
-| `APCA_API_SECRET_KEY` | Alpaca API authentication secret |
-| `ALPACA_SYMBOLS` | Comma-separated list of symbols to subscribe to |
+| `APCA_API_KEY_ID` | Alpaca API key |
+| `APCA_API_SECRET_KEY` | Alpaca API secret |
+| `ALPACA_SYMBOLS` | Symbols to subscribe to |
+| `ALPACA_FEED` | Market-data feed, such as `iex` |
+| `DATABASE_URL` | PostgreSQL connection string |
 
-`ALPACA_SYMBOLS` is optional. The producer defaults to `AAPL` when it is not set.
+Before starting a Rust service, load the configuration in its terminal:
 
-**Security:** Never commit the `.env` file or actual credentials to GitHub. Ensure `.env` is listed in the backend repository's `.gitignore`.
+```bash
+set -a
+source .env
+set +a
+```
+
+The producer, consumer, and query API run in separate terminals. Load the environment in each terminal as needed.
+
+Never commit `.env` to GitHub.
 
 ### 3. Start the Market Producer
 
