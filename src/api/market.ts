@@ -14,9 +14,14 @@ async function getJson<T>(path: string): Promise<T> {
 }
 
 export async function getHealth(): Promise<boolean> {
-  const response = await fetch(`${API_BASE_URL}/health`);
+  const response = await fetch(`${API_BASE_URL}/health`, {
+    signal: AbortSignal.timeout(3000),
+    cache: "no-store",
+  });
+
   return response.ok;
 }
+
 
 export function getLatestTrade(symbol: string): Promise<LatestTrade> {
   return getJson<LatestTrade>(`/prices/${encodeURIComponent(symbol)}`);
