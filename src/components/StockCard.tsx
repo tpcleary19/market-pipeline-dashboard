@@ -6,6 +6,19 @@ interface StockCardProps {
   symbol: string;
 }
 
+function formatTradeAge(totalSeconds: number): string {
+  const days = Math.floor(totalSeconds / 86400);
+  const hours = Math.floor((totalSeconds % 86400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+  if (hours > 0) return `${hours}h ${minutes}m`;
+  if (minutes > 0) return `${minutes}m ${seconds}s`;
+
+  return `${seconds}s`;
+}
+
 export function StockCard({ symbol }: StockCardProps) {
   const [trade, setTrade] = useState<LatestTrade | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,11 +72,17 @@ export function StockCard({ symbol }: StockCardProps) {
           <div className="stock-price">${Number(trade.price).toFixed(2)}</div>
           <div className="stock-details">
             <p>Size: {trade.size} shares</p>
+
             <p>
-              Last trade: {new Date(trade.timestamp).toLocaleString()}
-              {" · "}
-              {tradeAgeSeconds}s ago
+              <p>
+                Last trade: {new Date(trade.timestamp).toLocaleString()}
+                {" · "}
+                {tradeAgeSeconds !== null
+                  ? `${formatTradeAge(tradeAgeSeconds)} ago`
+                  : "Unknown"}
+              </p>
             </p>
+
             <p>Exchange: {trade.exchange}</p>
           </div>
         </>
