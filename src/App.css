@@ -125,3 +125,8 @@
 .trades-table tbody tr:last-child td {
   border-bottom: none;
 }
+
+.test-symbol-heading { margin: 32px 0 8px; color: #f8fafc; }
+.test-symbol-description { color: #94a3b8; margin-bottom: 20px; }
+.symbol-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; color: #e5e7eb; }
+.symbol-selector select { background: #151e30; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font: inherit; }
