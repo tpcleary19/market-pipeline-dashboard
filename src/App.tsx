@@ -18,6 +18,7 @@ function App() {
         <h1>Market Pipeline Dashboard</h1>
         <p>Real-Time Market Data Pipeline</p>
       </header>
+      
       <section className="stock-grid">
         {symbols.map((symbol) => (
           <StockCard key={symbol} symbol={symbol} />
