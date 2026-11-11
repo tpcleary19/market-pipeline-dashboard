@@ -21,6 +21,7 @@ function formatTradeAge(totalSeconds: number): string {
 
 export function StockCard({ symbol }: StockCardProps) {
   const [trade, setTrade] = useState<LatestTrade | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -44,6 +45,7 @@ export function StockCard({ symbol }: StockCardProps) {
     void refreshPrice();
 
     const interval = setInterval(() => {
+      setNow(Date.now());
       void refreshPrice();
     }, 2000);
 
@@ -56,7 +58,7 @@ export function StockCard({ symbol }: StockCardProps) {
   const tradeAgeSeconds = trade
     ? Math.max(
         0,
-        Math.floor((Date.now() - new Date(trade.timestamp).getTime()) / 1000),
+        Math.floor((now - new Date(trade.timestamp).getTime()) / 1000),
       )
     : null;
 
@@ -74,13 +76,11 @@ export function StockCard({ symbol }: StockCardProps) {
             <p>Size: {trade.size} shares</p>
 
             <p>
-              <p>
-                Last trade: {new Date(trade.timestamp).toLocaleString()}
+              Last trade: {new Date(trade.timestamp).toLocaleString()}
                 {" · "}
                 {tradeAgeSeconds !== null
                   ? `${formatTradeAge(tradeAgeSeconds)} ago`
                   : "Unknown"}
-              </p>
             </p>
 
             <p>Exchange: {trade.exchange}</p>

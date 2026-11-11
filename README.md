@@ -1,6 +1,16 @@
 # Real-Time Market Pipeline Dashboard
 
-A React and TypeScript dashboard displaying live stock prices and recent trades from a Rust-based market data pipeline.
+A React and TypeScript dashboard displaying live stock prices and recent trades from a Rust-based market data pipeline. The query API runs on Google Cloud Run and reads from a hosted Neon PostgreSQL database.
+
+![Running market dashboard showing API connectivity, AAPL, MSFT, and NVDA prices, and recent AAPL trades](docs/images/market-data-page.png)
+
+The running dashboard shows:
+
+- Latest prices, trade sizes, exchange codes, and trade timestamps for **AAPL**, **MSFT**, and **NVDA**.
+- Selectable trade history with prices, sizes, exchange codes, and trade IDs.
+- API connection status and automatic polling for updates.
+
+Screenshot captured November 11, 2026.
 
 ## System Architecture
 
@@ -13,11 +23,12 @@ flowchart TD
     D --> E[("PostgreSQL: Trade History")]
     D --> F[("Redis: Latest Prices")]
 
-    E --> G["Rust Axum Query API"]
-    F --> G
+    E --> G["Rust Axum Query API (Cloud Run)"]
 
     G --> H["React Dashboard (Vite + TypeScript)"]
 ```
+
+The consumer also maintains Redis latest-price entries. The current query API reads both latest prices and trade history from PostgreSQL; Redis is outside the dashboard query path. The deployed database is hosted on Neon.
 
 ### How Data Flows
 
@@ -30,7 +41,7 @@ flowchart TD
 
 ### Dashboard Polling
 
-- Latest stock prices: every **2 seconds**, from Redis through the API.
+- Latest stock prices: every **2 seconds**, from PostgreSQL through the API.
 - Recent trades: every **5 seconds**, from PostgreSQL through the API.
 
 The dashboard uses HTTP polling rather than a persistent WebSocket connection.
@@ -131,12 +142,12 @@ Our recent trades table uses the same approach with a five-second polling interv
 sequenceDiagram
     participant Timer as React Timer
     participant API as Rust Axum API
-    participant Redis
+    participant DB as PostgreSQL
     participant React
 
     Timer->>API: GET /prices/AAPL
-    API->>Redis: Read latest:AAPL
-    Redis-->>API: Latest trade
+    API->>DB: Query latest AAPL trade
+    DB-->>API: Latest trade
     API-->>Timer: JSON response
     Timer->>React: setTrade(newTrade)
     React->>React: Re-render StockCard
@@ -144,168 +155,73 @@ sequenceDiagram
 
 React updates the displayed price without reloading the entire web page.
 
-## Local Development
+## Run the Dashboard
 
-The project consists of two separate repositories:
-
-- **Backend:** `real-time-market-pipeline` — Rust, Kafka, PostgreSQL, Redis, and Axum.
-- **Frontend:** `market-pipeline-dashboard` — React, TypeScript, and Vite.
-
-### Prerequisites
-
-- Rust and Cargo
-- Docker Desktop with Docker Compose
-- Node.js and npm
-- Alpaca API credentials
-
-### 1. Start Infrastructure
-
-From the Rust backend directory:
+Requires Node.js and npm. The backend lives in the separate [real-time-market-pipeline repository](https://github.com/tpcleary19/real-time-market-pipeline).
 
 ```bash
-cd ~/real-time-market-pipeline
-docker compose up -d
+npm ci
 ```
 
-This starts Kafka, PostgreSQL, and Redis.
+### Connect to a Deployed API
 
-The PostgreSQL database must have the required migrations applied before starting the consumer.
+Create `.env.local` in the dashboard directory:
 
-### 2. Configure Environment Variables
-
-The Rust backend uses a `.env` file for local configuration.
-
-From the backend directory:
-
-```bash
-cd ~/real-time-market-pipeline
-cp .env.example .env
+```dotenv
+VITE_API_BASE_URL=https://YOUR-CLOUD-RUN-SERVICE.run.app
 ```
 
-Edit `.env` and enter your Alpaca API credentials.
-
-The configuration includes:
-
-| Variable | Purpose |
-|---|---|
-| `APCA_API_KEY_ID` | Alpaca API key |
-| `APCA_API_SECRET_KEY` | Alpaca API secret |
-| `ALPACA_SYMBOLS` | Symbols to subscribe to |
-| `ALPACA_FEED` | Market-data feed, such as `iex` |
-| `DATABASE_URL` | PostgreSQL connection string |
-
-Before starting a Rust service, load the configuration in its terminal:
+Replace the example with your deployed API URL, without a trailing slash. Then start Vite:
 
 ```bash
-set -a
-source .env
-set +a
-```
-
-The producer, consumer, and query API run in separate terminals. Load the environment in each terminal as needed.
-
-Never commit `.env` to GitHub.
-
-### 3. Start the Market Producer
-
-Open a terminal:
-
-```bash
-cd ~/real-time-market-pipeline
-
-# Load credentials into the current shell
-set -a
-source .env
-set +a
-
-# Start the producer
-cargo run -p market-producer
-```
-
-The producer connects to Alpaca's WebSocket and publishes market trades to Kafka.
-
-The environment variables must be loaded in the same terminal session used to start the producer.
-
-### 4. Start the Market Consumer
-
-Open a second terminal:
-
-```bash
-cd ~/real-time-market-pipeline
-cargo run -p market-consumer
-```
-
-The consumer reads trades from Kafka in batches, writes historical trades to PostgreSQL, and updates the latest trade in Redis.
-
-### 5. Start the Query API
-
-Open a third terminal:
-
-```bash
-cd ~/real-time-market-pipeline
-cargo run -p query-api
-```
-
-The Axum HTTP API listens locally on port `3000`.
-
-### 6. Start the React Dashboard
-
-Open a fourth terminal:
-
-```bash
-cd ~/market-pipeline-dashboard
-npm install
 npm run dev
 ```
 
-Open `http://localhost:5173/` in your browser.
+Open **http://localhost:5173**. The API must allow that exact origin through `CORS_ALLOWED_ORIGINS`. An IP address, another port, or a hosted dashboard URL is a different origin and must be allowed separately. Restart Vite after changing environment files.
 
-The dashboard displays latest stock prices and recent trades, refreshing automatically.
+The dashboard needs only the API URL. Database credentials and Alpaca keys belong in the backend environment or Secret Manager. Vite variables prefixed with `VITE_` are visible to the browser.
+
+### Connect to a Local API
+
+Follow the backend repository instructions to configure Alpaca credentials, start Kafka/PostgreSQL/Redis, apply migrations, and run the producer and consumer. Configure `ALPACA_SYMBOLS=AAPL,MSFT,NVDA` for the dashboard's three symbols.
+
+Start the query API from the backend directory:
+
+```bash
+cargo run -p query-api
+```
+
+The API defaults to port **3001** and reads `DATABASE_URL` from its environment or backend `.env` file. Ensure it uses the same database as the consumer.
+
+Remove `VITE_API_BASE_URL` from dashboard environment files to use the default `/api` path, then restart Vite. The development proxy forwards requests as follows:
+
+```text
+Browser: http://localhost:5173/api/prices/AAPL
+    → Vite development proxy
+    → Rust API: http://localhost:3001/prices/AAPL
+    → PostgreSQL
+```
+
+If the backend uses a different `PORT`, update the proxy target in `vite.config.ts` to match.
 
 ### API Endpoints
 
-| Endpoint | Purpose | Data Source |
-|---|---|---|
-| `GET /health` | Backend health check | Axum |
-| `GET /prices/AAPL` | Latest AAPL trade | Redis, with PostgreSQL fallback |
-| `GET /trades/AAPL?limit=10` | Ten most recent AAPL trades | PostgreSQL |
+| Endpoint | Purpose |
+|---|---|
+| `GET /health` | API health check used by the connection indicator |
+| `GET /ready` | Database readiness check |
+| `GET /prices/AAPL` | Latest stored AAPL trade |
+| `GET /trades/AAPL?limit=10` | Ten most recent AAPL trades |
 
-### Development Proxy
+Replace `AAPL` with `MSFT` or `NVDA` for the other dashboard symbols. The base `/` route is not defined and returns 404.
 
-During local development, Vite forwards requests beginning with `/api` to the Rust API at `http://localhost:3000`.
-
-For example:
-
-```text
-Browser
-  GET http://localhost:5173/api/prices/AAPL
-                  |
-                  v
-Vite Development Server
-                  |
-                  v
-Rust Axum API
-  GET http://localhost:3000/prices/AAPL
-                  |
-                  v
-Redis / PostgreSQL
-```
-
-The frontend uses `VITE_API_BASE_URL` when explicitly configured; otherwise it defaults to `/api`.
-
-The React dashboard does not need Alpaca credentials. All market-data access goes through the Rust backend.
-
-### Git Workflow
-
-The frontend and backend are maintained in separate Git repositories.
-
-After making changes:
+### Build and Check
 
 ```bash
-git status
-git add .
-git commit -m "Describe the changes"
-git push
+npm run lint
+npm run build
 ```
 
-Commit changes independently in the repository where they were made.
+The production build is written to `dist/`. Set `VITE_API_BASE_URL` before building for static hosting; the Vite development proxy is available only during development. Allow the hosted frontend's exact origin in the API's CORS configuration.
+
+Environment files, dependencies, and build output are excluded from Git. The screenshot is stored in `docs/images/` so GitHub renders it directly in this README.
