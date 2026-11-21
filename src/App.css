@@ -130,3 +130,141 @@
 .test-symbol-description { color: #94a3b8; margin-bottom: 20px; }
 .symbol-selector { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 32px; color: #e5e7eb; }
 .symbol-selector select { background: #151e30; color: #f8fafc; border: 1px solid #334155; border-radius: 6px; padding: 8px 12px; font: inherit; }
+
+.investigations-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.investigations-heading h2 {
+  margin: 0;
+}
+
+.investigations-heading button {
+  background: #1e293b;
+  color: #e5e7eb;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.investigations-heading button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.investigations-heading button:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+.investigation-link {
+  color: #93c5fd;
+  text-underline-offset: 3px;
+}
+
+.investigation-link:focus-visible {
+  outline: 2px solid #93c5fd;
+  outline-offset: 3px;
+}
+
+.investigation-page > .dashboard-header {
+  margin-top: 24px;
+}
+
+.investigation-metadata {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 24px 40px;
+  margin: 0 0 32px;
+}
+
+.investigation-metadata dt {
+  color: #94a3b8;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+
+.investigation-metadata dd {
+  margin: 0;
+  color: #f8fafc;
+}
+
+.investigation-report {
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  color: #e5e7eb;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.investigation-report {
+  max-width: 80ch;
+}
+
+.investigation-report h3 {
+  margin: 28px 0 12px;
+  font-size: 20px;
+  line-height: 1.4;
+  color: #f8fafc;
+}
+
+.investigation-report h4 {
+  margin: 24px 0 10px;
+  font-size: 17px;
+  color: #f8fafc;
+}
+
+.investigation-report p,
+.investigation-report ul,
+.investigation-report ol {
+  margin: 0 0 16px;
+}
+
+.investigation-report li {
+  margin-bottom: 8px;
+}
+
+.investigation-report a {
+  color: #93c5fd;
+  text-underline-offset: 3px;
+}
+
+.investigation-report blockquote {
+  border-left: 3px solid #475569;
+  margin: 16px 0;
+  padding-left: 16px;
+  color: #cbd5e1;
+}
+
+.investigation-report code {
+  background: #0f172a;
+  border-radius: 4px;
+  padding: 2px 5px;
+}
+
+.investigation-report pre {
+  overflow-x: auto;
+}
+
+.investigation-sources {
+  border-top: 1px solid #334155;
+  margin-top: 32px;
+  padding-top: 8px;
+}
